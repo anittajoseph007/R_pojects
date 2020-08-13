@@ -1,0 +1,765 @@
+---
+title: 'Agora: DarkNet Marketplace'
+author: "Bebin K Raju & Anitta Joseph"
+date: "3/2/2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Agora: DarkNet Marketplace 2014 -2015
+
+```{r}
+library(readr)
+Agora <- read.csv("C:/Users/Anitta/Desktop/Agora.csv")
+View(Agora)
+head(Agora)
+```
+```{r}
+dim(Agora)
+```
+
+```{r}
+# Finding the columns with missing values
+colnames(Agora)[colSums(is.na(Agora)) > 0]
+```
+All the columns except Vendor and Category contain some missing values.
+```{r}
+# Let's look at how many different vendors we have in our data.
+length(unique(Agora$Vendor))
+```
+
+## Top 15 vendors by the number of listings
+
+```{r}
+#install.packages("dplyr")
+library(dplyr)
+(top_15_listings <- Agora %>% 
+    group_by(Vendor) %>% 
+    summarise(Listings = n()) %>% 
+    top_n(15) %>% 
+    arrange(desc(Listings)))
+```
+
+```{r}
+#Lets Plot it
+library(ggplot2)
+options(repr.plot.width = 6, repr.plot.height = 4.5)
+top_15_listings %>% 
+    ggplot(aes(reorder(Vendor, Listings), Listings)) +
+    geom_bar(stat = "identity") +
+    xlab("Vendor") +
+    coord_flip()
+```
+We see that some vendors like optiman sexyhomer mssource and profesorhouse have the highest number of listings on Agora. Probably they are the ones with the largest customer base and with the greatest control over the market!
+
+## Top 15 categories by the number of listings 
+```{r}
+(top_15_category <- Agora %>% 
+    group_by(Category) %>% 
+    summarise(Count_Category = n()) %>% 
+    arrange(desc(Count_Category)) %>% 
+    top_n(15))
+```
+```{r}
+#Lets plot the listing
+top_15_category %>% 
+    ggplot(aes(reorder(Category, Count_Category), Count_Category)) +
+    geom_bar(stat = "identity") +
+    xlab("Category") +
+    coord_flip()
+```
+Weed takes it away by a far greater margin than any other sub-category.
+
+## Percentage share of categories in the Agora market
+
+```{r}
+(top_15_category <- top_15_category %>% 
+    mutate(Share = Count_Category/sum(Count_Category)*100))
+```
+Weed comprises of a massive 27.7% of the total market share of the top 15 categories on the dark market which may not be that surprising!
+
+```{r}
+#separate Category into different columns Category, Sub_Category, and Product
+library(tidyverse)
+agora <- Agora %>% filter(!is.na(Category)) %>% 
+    separate(Category, into = c("Category", "Sub_Category", "Product"),
+             sep = "/", fill = "warn")
+```
+
+## Distribution of products over different categories
+
+```{r}
+agora %>% 
+    group_by(Category, Sub_Category) %>% 
+    summarise(Count_Product = n()) %>% 
+    arrange(desc(Count_Product))
+```
+We can clearly see that the Drug market takes all away. A slight eyeballing reveals that Services and Data category are also among the top after the King!
+
+```{r}
+agora %>%  
+    group_by(Category) %>% 
+    summarise(Count = n()) %>% 
+    arrange(desc(Count))
+```
+Let's look at the king's children to see which ones have the highest share in the king's wealth!
+
+## distribution of different categories of drugs
+
+```{r}
+# Looking at the distribution of different categories of drugs
+agora %>% 
+    filter(Category == "Drugs") %>% 
+    group_by(Sub_Category) %>% 
+    summarise(Count_Product = n()) %>% 
+    arrange(desc(Count_Product)) %>% 
+    mutate(Share = Count_Product / sum(Count_Product) * 100)
+```
+Cannbis leads the drug market with the largest share of 33.5 percent of all the drugs sold on the dark market.
+
+## cannabis' share compared to all the dark market
+
+```{r}
+agora %>% 
+    group_by(Sub_Category) %>% 
+    summarise(Count_Product = n()) %>% 
+    arrange(desc(Count_Product)) %>% 
+    mutate(Share = Count_Product / sum(Count_Product) * 100) %>% 
+    filter(Share > 5)
+```
+What else did you expect? People are crazy about Cannabis on the drug market! 
+
+## distribution of different categories of services
+
+```{r}
+agora %>% 
+    filter(Category == "Services") %>% 
+    group_by(Sub_Category) %>% 
+    summarise(Count_Product = n()) %>% 
+    arrange(desc(Count_Product))
+```
+ Nothing groundbreaking as the Cannabis
+ 
+ ## Price Analysis
+ 
+```{r}
+agora %>% 
+    separate(Price, c("Price", "Currency"), " ") %>% 
+    select(Currency) %>% 
+    group_by(Currency) %>% 
+    summarise(Count = n())
+```
+ 
+
+Indeed, the mode of currency is Bitcoin mostly! We can ignore the other entries (probably data entry error or someone was high on LSD while filling the data, you never know!).
+
+```{r}
+agora <- agora %>% 
+    separate(Price, c("Price", "Currency"), " ")
+```
+let's take the average conversion rate between BTC and USD for that period  2014 to 2015 which is 340$ approximately
+```{r}
+agora <- agora %>% 
+    filter(!is.na(Price)) %>% 
+    mutate(Price = as.numeric(Price) * 340, Currency = "USD") %>% 
+    filter(!is.na(Price))
+```
+
+
+Let us now try to plot the distribution of Price to get an idea of the mean price for all the stuff available on the dark web/market.
+```{r}
+agora %>% 
+    ggplot(aes(x = Price)) +
+    geom_histogram(bins = 40)
+```
+
+Damn! I wasn't expecting this one bar histogram. I bet you weren't too. But this is the beauty of Exploratory Data Analysis. It helps us look and understand our data better without having to see and gauge a lot of numbers. We didn't need to compare the max price to the other prices in order to see here that there are a lot of products with less price and only a few with a really high price .
+```{r}
+summary(agora$Price)
+```
+```{r}
+table(agora$Price > mean(agora$Price) + 6 * sd(agora$Price))
+```
+There are some serious outliers there in our dataset and I know what you're thinking. What is the that thing with such a high price? Let's figure it out!
+
+```{r}
+agora %>% 
+    filter(Price > mean(Price) + 6 * sd(Price)) %>% 
+    arrange(desc(Price)) %>% 
+    head()
+```
+Are you even surprised now that the item with the highest price is a Drug? I am definitely not! So it is called Speed and it's a type of a Stimulant. Wait for now, you can search more about it on Google later! I know this is too interesting to not google up! So these guys "HAPPyholland" are so confident in their product that they just ask you to check out their reviews (see the text in the item column). I guess the criteria is legit!
+
+```{r}
+agora %>% 
+    filter(Price > mean(Price) + 6 * sd(Price)) %>% 
+    arrange(desc(Price)) %>% 
+    group_by(Category) %>% 
+    summarise(Count = n())
+```
+Almost all the top outliers in price are Drugs. Let us see if we can get a better view of the distribution through the histogram category-wise
+
+```{r}
+agora %>% 
+    filter(!is.na(Price)) %>% 
+    ggplot(aes(x = Price)) +
+    geom_histogram(bins = 40) +
+    xlim(c(0, 10^3)) +
+    xlab("Price (USD)")
+```
+
+
+
+The distribution is right-skewed. This means that the Price values highly assymmetric which makes sense in the real world. There will be a lot of items sold at a lower price but not so many items that being sold at a really high price.
+
+We can remove the right-skewness of the distribution by taking the log transformation
+```{r}
+agora %>% 
+    filter(!is.na(Price)) %>% 
+    ggplot(aes(x = Price)) +
+    geom_histogram(binwidth = 0.3) +
+    scale_x_log10() +
+    labs(x = "Price (USD)")
+```
+Let us plot the price distribution (in log scale) for all the categories. The distributions obtained are expected to be nearly normal since we are using the log transformation on prices and as we see, they are!
+
+```{r}
+agora %>% 
+    group_by(Category) %>% 
+    ggplot(aes(x = Price)) +
+    geom_histogram(bins = 40) +
+    scale_x_log10() +
+    labs(x = "Price (USD) - log scale") +
+    facet_wrap(~ Category, scales = "free", ncol = 4)
+```
+
+##Origin and destination of products 
+
+Looking at what we have in the data, we are now really curious about what are the main points of origin and destination of these products.
+We will first convert the origins and destinations into country codes so that we can match them with the world map_data that comes with ggplot2 package!
+```{r}
+library(countrycode)
+suppressWarnings(origin <- countrycode(agora$Origin, "country.name", "iso2c") %>% 
+                    as_tibble() %>% 
+                    setNames("iso") %>% 
+                    filter(!is.na(iso)))
+suppressWarnings(dest <- countrycode(agora$Destination, "country.name", "iso2c") %>% 
+                    as_tibble() %>% 
+                    setNames("iso") %>% 
+                    filter(!is.na(iso)))
+```
+
+Now we look at the counts of rows with different origins and destinations to see which areas are the most popular.
+```{r}
+origin %>% 
+    group_by(iso) %>% 
+    summarise(freq = n()) %>% 
+    filter(freq > 100) %>% 
+    arrange(desc(freq)) %>% 
+    mutate(prop = freq / sum(freq) * 100)
+```
+```{r}
+dest %>% 
+    group_by(iso) %>% 
+    summarise(freq = n()) %>% 
+    filter(freq > 5) %>% 
+    arrange(desc(freq)) %>% 
+    mutate(prop = freq / sum(freq) * 100)
+```
+The US is way above any other country by comparison and is clearly the winner with about 40% of the market share in origin and 64% of the market share in destination (these are huge numbers, enough to conclude US as the king of this kingdom!). But we also have a lot of other interesting origin and destination countries to look at. We will try to plot these countries on the world map according to their frequency in the dataset. We will use map_data for this purpose which comes with ggplot2.
+
+```{r}
+library(maps)
+world_data <- map_data("world") %>% 
+    as_tibble() %>% 
+    mutate(iso = countrycode(region, "country.name", "iso2c"))
+```
+```{r}
+paste("Origin Countries")
+(origin <- origin %>% 
+    group_by(iso) %>% 
+    summarise(freq = n()) %>% 
+    filter(freq > 1000, iso != "US") %>% 
+    arrange(desc(freq)))
+paste("Destination Countries")
+(dest <- dest %>% 
+    group_by(iso) %>% 
+    summarise(freq = n()) %>% 
+    filter(freq > 50, iso != "US") %>% 
+    arrange(desc(freq)))
+```
+We will now perform a left outer join on the two tables.
+
+```{r}
+# Doing a left outer join on the two tables
+origin_data <- left_join(world_data, origin, by = "iso") %>% 
+    filter(!is.na(freq))
+dest_data <- left_join(world_data, dest, by = "iso") %>% 
+    filter(!is.na(freq))
+```
+
+```{r}
+ggplot(origin_data, aes(long, lat)) +
+    geom_polygon(aes(group = group, fill = freq)) +
+    labs(x = "Longitudes", y = "Latitudes", title = "Origin of Products sold on Agora") +
+    coord_equal()
+```
+After the USA, we have in line the Great Britain, Australia, Germany, Netherlands and Canada in that order in terms of the origin countries. Interesting!
+```{r}
+
+
+ggplot(dest_data, aes(long, lat)) +
+    geom_polygon(aes(group = group, fill = freq)) +
+    labs(x = "Longitudes", y = "Latitudes", title = "Destination of Products sold on Agora") +
+    coord_equal()
+
+
+```
+
+
+Again in terms of the destination, we have Australia, the Great Britain, Germany and Canada in that order which is not a surprise I guess?
+
+## Extracting information from ratings
+
+```{r}
+
+
+# separating the rating into the actual rating and the max rating (5)
+agora <- agora %>% 
+    separate(Rating, into = c("Rating", "Max"), sep = "/") %>% 
+    filter(!is.na(Max), Rating != ~5) %>%    #just filtering out some gibberish values created
+    mutate(Rating = as.numeric(Rating))
+
+
+```
+```{r}
+
+
+agora %>% 
+    filter(Rating > 0) %>% 
+    ggplot(aes(x = Rating)) +
+    geom_histogram(bins = 40)
+
+
+```
+
+This is a highly left-skewed distribution. Let's look at the distribution of all the ratings above 4
+```{r}
+agora %>% 
+    filter(Rating > 4) %>% 
+    ggplot(aes(x = Rating)) +
+    geom_histogram(bins = 40)
+```
+```{r}
+agora %>% 
+    filter(Rating > 4) %>% 
+    ggplot(aes(x = Rating)) +
+    geom_histogram(bins = 40) +
+    facet_wrap(~ Category, scales = "free", ncol = 4)
+```
+
+What we can infer from the above plot is that:
+
+    weapons are rated 5 most of the times
+    counterfeits and data also have good ratings most of the times.
+    information is surprisingly rated somewhere near 4.8 instead of 5 most of the times. This may indicate dissatisfaction/less satisfaction of customers for information as comapred to other categories.
+    jewelry also surprisingly, has very less amount of 5 ratings (probably the least of all categories). This might reflect the skepticism of customers about whether the jewelry is fake or not.
+
+## Find the most expensive dealers (drugs)
+
+Now we try to corner out some of the most expensive drug dealers on Agora along with their locations
+
+```{r}
+# getting the drug vendors in descending order of their mean prices
+agora$Vendor = as.factor(agora$Vendor)
+(most_expensive_drug_dealers <- agora %>% 
+    filter(Category == "Drugs") %>% 
+    group_by(Vendor) %>% 
+    summarise(avg_price_drugs = mean(Price)) %>% 
+    arrange(desc(avg_price_drugs)) %>% 
+    top_n(15))
+```
+
+```{r}
+most_expensive_drug_dealers %>% 
+    ggplot(aes(x = avg_price_drugs, y = fct_reorder(Vendor, avg_price_drugs))) +
+    geom_point() +
+    labs(x = "Average price of drugs", y = "Vendors")
+```
+```{r}
+# getting the drug vendors' origin along with the average price and name
+most_expensive_dealers_origin <- agora %>% 
+    filter(Category == "Drugs", Vendor %in% most_expensive_drug_dealers$Vendor) %>% 
+    select(Vendor, Origin) %>% 
+    filter(!is.na(Origin)) %>% 
+    distinct() %>% 
+    arrange(Origin)
+
+(most_expensive_drug_dealers <- left_join(most_expensive_drug_dealers, most_expensive_dealers_origin))
+```
+
+
+## drug dealers with the top 3 highest average prices.
+
+```{r}
+agora %>% 
+    filter(Vendor %in% most_expensive_drug_dealers$Vendor) %>% 
+    group_by(Vendor, Origin) %>% 
+    summarise(Count = n()) %>% 
+    filter(Vendor %in% c("heroking", "EdWestwick", "Houba"))
+```
+
+
+It seems that heroking (with the highest average price in drugs category) operates solely from 1 location (Netherlands). The second most expensive dealer has their hub in China and the third most expensive dealer operaets from the USA.
+
+## Find the most expensive dealers (weapons) 
+
+Apart from drugs, the other category which is highly unsafe for people is Weapons. Let us do a similar analysis for Weapons to corner out the main dealers for this category.
+
+```{r}
+# getting the weapon vendors in descneding order of their mean prices
+(most_expensive_weapon_dealers <- agora %>% 
+    filter(Category == "Weapons") %>% 
+    group_by(Vendor) %>% 
+    summarise(avg_price_weapons = mean(Price)) %>% 
+    arrange(desc(avg_price_weapons)) %>% 
+    top_n(15))
+```
+
+
+There seems to be a clear winner in this cateogry as the king of the dealers (at least this is what seems like from this table!). The average price by the echo is huge! We will ignore our emperor in the plot otherwise we won't be able to get a meaningful plot and won't be able to compare the relative monopoly of the other weapon dealers.
+
+```{r}
+most_expensive_weapon_dealers %>% 
+    filter(Vendor != "echo") %>% 
+    ggplot(aes(x = avg_price_weapons, y = fct_reorder(Vendor, avg_price_weapons))) +
+    geom_point() +
+    labs(x = "Average price of weapons", y = "Vendors")
+```
+
+
+I really like the names of these vendors! Like the subwaygal, TheHappyGuy and frygirlswirl? Too exotic to be doing something legal! Won't you agree? Just kidding!
+
+```{r}
+# getting the weapon vendors' origin along with the average price and name
+most_expensive_weapon_dealers_origin <- agora %>% 
+    filter(Category == "Weapons", Vendor %in% most_expensive_weapon_dealers$Vendor) %>% 
+    select(Vendor, Origin) %>% 
+    filter(!is.na(Origin)) %>% 
+    distinct() %>% 
+    arrange(Origin)
+
+(most_expensive_weapon_dealers <- left_join(most_expensive_weapon_dealers, most_expensive_weapon_dealers_origin))
+```
+
+```{r}
+agora %>% 
+    filter(Vendor %in% most_expensive_weapon_dealers$Vendor) %>% 
+    group_by(Vendor, Origin) %>% 
+    summarise(Count = n()) %>% 
+    filter(Vendor %in% c("echo", "subwaygal", "frygirlswirl"))
+```
+
+
+
+echo has a large number of regions of opertion including the USA, Poland and Panama and god knows where else! subwaygal seems to be operating only from the USA and frygirlswirl have their feet in USA, Canada and the UK (not to mention the internet! Are you kidding me?)
+
+## Word Cloud
+
+```{r}
+
+```
+
+
+```{r}
+agora$Item.Description<- gsub('\\s+', '',agora$Item.Description)
+WDLC<- agora %>% select(Category,Item.Description) %>% filter(Category=="Drugs") 
+
+
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(tidyverse)
+library(dplyr)
+
+### read data
+text<- WDLC$Item.Description
+
+text <- paste(text,collapse = " ")
+
+docs <- Corpus(VectorSource(text))
+########wordcloud ############################
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " " , x))
+docs <- tm_map(docs, toSpace, "/")
+
+docs <- tm_map(docs, toSpace, "@")
+
+docs <- tm_map(docs, toSpace, "\\|")
+
+# Convert the text to lower case
+docs <- tm_map(docs, content_transformer(tolower))
+
+# Remove numbers
+docs <- tm_map(docs, removeNumbers)
+
+# Remove english common stopwords
+docs <- tm_map(docs, removeWords, stopwords("english"))
+
+# Remove your own stop word
+# specify your stopwords as a character vector
+docs <- tm_map(docs, removeWords, c("blabla1", "blabla2"))
+
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+
+# Text stemming
+# docs &lt;- tm_map(docs, stemDocument)
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 100,
+max.words=200, random.order=FALSE, rot.per=0.35,
+colors=brewer.pal(8, "Dark2"))
+
+
+```
+
+```{r}
+
+agora$Item.Description<- gsub('\\s+', '',agora$Item.Description)
+WDLC<- agora %>% select(Category,Item.Description) %>% filter(Category=="Data") 
+
+
+
+### read data
+text<- WDLC$Item.Description
+
+text <- paste(text,collapse = " ")
+
+docs <- Corpus(VectorSource(text))
+########wordcloud ############################
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " " , x))
+docs <- tm_map(docs, toSpace, "/")
+
+docs <- tm_map(docs, toSpace, "@")
+
+docs <- tm_map(docs, toSpace, "\\|")
+
+# Convert the text to lower case
+docs <- tm_map(docs, content_transformer(tolower))
+
+# Remove numbers
+docs <- tm_map(docs, removeNumbers)
+
+# Remove english common stopwords
+docs <- tm_map(docs, removeWords, stopwords("english"))
+
+# Remove your own stop word
+# specify your stopwords as a character vector
+docs <- tm_map(docs, removeWords, c("blabla1", "blabla2"))
+
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+
+# Text stemming
+# docs &lt;- tm_map(docs, stemDocument)
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 10,
+max.words=200, random.order=FALSE, rot.per=0.35,
+colors=brewer.pal(8, "Dark2"))
+
+
+```
+
+```{r}
+a <- is.na(agora)
+table(a)
+
+missing_value <- c(sum(is.na(agora))/(ncol(agora)*nrow(agora)))
+missing_value
+
+#library(mice)
+#md.pattern(agora)
+
+agora <- na.omit(agora)
+a <- is.na(agora)
+table(a)
+```
+## Linear Model
+```{r}
+
+ggplot(agora,aes(agora$Price,agora$Rating))+geom_point()+geom_smooth()
+
+#linear_model <- lm(agora$Rating ~ agora$Price)
+#summary(linear_model)
+```
+
+```{r}
+agora<- na.omit(agora)
+table(is.na(agora))
+
+```
+
+```{r}
+agora$Category<- as.factor(agora$Category)
+class(agora$Category)
+```
+
+```{r}
+ggplot(agora, aes(agora$Category, agora$Price, color = agora$Rating)) + geom_point()
+```
+
+```{r}
+
+attach(agora)
+head(agora)
+data=data.frame(agora[2],agora[7])
+head(data)
+data=as.data.frame(data)
+class(data)
+data$Category=as.numeric(data$Category)
+data$Price=as.numeric(data$Price)
+table(is.double(data$Price))
+```
+
+```{r}
+set.seed(123)
+# Compute and plot wss for k = 2 to k = 15.
+k.max <- 10
+data1 <- data
+wss <- sapply(1:k.max,
+              function(k){kmeans(data1, k, nstart=50,iter.max = 10 )$tot.withinss})
+wss
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE,
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+
+# Interpretations:
+#K=3 is the ideal no of clusters.
+```
+
+
+```{r}
+table(is.infinite(data$Category))
+set.seed(20)
+irisCluster <- kmeans(na.omit(data), 2)
+irisCluster
+```
+
+```{r}
+irisCluster$cluster <- as.factor(irisCluster$cluster)
+ggplot(data, aes(agora$Category, agora$Price, color = irisCluster$cluster)) +
+geom_point()
+```
+
+```{r}
+
+library(rpart)
+library(rpart.plot)
+
+```
+
+
+```{r}
+set.seed(1)
+n <-nrow(data11)
+dfs <- data11[sample(n),]
+train_index <- 1:round(0.7*n)
+train <- dfs[train_index, ]
+test_index <- (round(0.7*n)+1):n
+test <- dfs[test_index, ]
+```
+
+
+```{r}
+attach(agora)
+head(agora)
+
+data11=data.frame(agora[2],agora[3],agora[4],agora[7],agora[11])
+head(data11)
+data11=as.data.frame(data11)
+class(data11)
+data11$Category=as.factor(data11$Category)
+data11$Price=as.numeric(data11$Price)
+data11$Sub_Category=as.factor(data11$Sub_Category)
+data11$Product=as.factor(data11$Product)
+
+
+tree1 = rpart(train$Category~train$Rating+train$Price,data=train,method = "class")
+prp(tree1)
+```
+
+```{r}
+summary(tree1)
+```
+```{r}
+pred_test <- predict(tree1,test,type="class")
+sum(pred_test)
+conf <- table(test$Category,pred_test)
+acc <- sum(diag(conf))/sum(conf)
+```
+```{r}
+table()
+```
+
+
+```{r}
+head(data11)
+```
+```{r}
+head(data11)
+data12=data.frame(data11[4],data11[5])
+head(data12)
+```
+
+```{r}
+library(caTools)
+sample = sample.split(data12$Rating, SplitRatio = .75)
+train = subset(data12, sample == TRUE)
+test  = subset(data12, sample == FALSE)
+dim(train)
+dim(test)
+```
+
+
+
+```{r}
+library(randomForest)
+rf_model <- randomForest(
+  Rating ~ Price,
+  data=train
+)
+```
+
+```{r}
+pred = predict(rd_model, newdata=test[-2])
+pred
+```
+
+
+```{r}
+print("hello_wORLD")
+```
+
+
+
