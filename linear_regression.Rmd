@@ -1,0 +1,127 @@
+---
+title: "Model impementation using R"
+author: "Anitta"
+date: "01/08/2020"
+output: pdf_document
+---
+
+Linear Regression
+
+It is one of the power full methord that has been in use for more than 3 decades.It helps to find a relationship between a single, continuous variable called Dependent or Target variable and one or more other variables (continuous or not) called Independent Variables.It's a straight line curve called as regression line or best fitting line.
+To peform regression the dependent variable should be continuous i.e. numeric values (no categories or groups).When u have more than one independent variable then it is called multiple linear regresion.
+
+```{r}
+#Loading data
+data(mtcars) 
+
+# Looking at variables
+str(mtcars)
+
+```
+
+In this dataset, mpg is a target variable. See first 6 rows of data by using head() function.
+
+```{r}
+head(mtcars)
+```
+
+```{r}
+summary(mtcars)
+```
+
+Make sure categorical variables are stored as factors,converting variables to factors.
+
+```{r}
+mtcars$am   = as.factor(mtcars$am)
+mtcars$cyl  = as.factor(mtcars$cyl)
+mtcars$vs   = as.factor(mtcars$vs)
+mtcars$gear = as.factor(mtcars$gear)
+```
+
+
+Identifying and Correcting Collinearity
+
+In this step, we are identifying independent variables which are highly correlated to each other. Since mpg is a dependent variable, we are removing it in the code below.
+
+```{r}
+#Dropping dependent variable for calculating Multicollinearity
+mtcars_a = subset(mtcars, select = -c(mpg))
+
+#Identifying numeric variables
+numericData <- mtcars_a[sapply(mtcars_a, is.numeric)]
+
+#Calculating Correlation
+descrCor <- cor(numericData)
+
+# Print correlation matrix and look at max correlation
+print(descrCor)
+
+```
+
+sapply() function takes list, vector or data frame as input and gives output in vector or matrix. It is useful for operations on list objects and returns a list object of same length of original set. sapply() function does the same job as lapply() function but returns a vector.
+
+
+```{r}
+# Visualize Correlation Matrix
+library(corrplot)
+corrplot(descrCor, order = "FPC", method = "color", type = "lower", tl.cex = 0.7, tl.col = rgb(0, 0, 0))
+```
+ everything about correlation matrix is given in this https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+ 
+```{r}
+library(caret)
+# Checking Variables that are highly correlated
+highlyCorrelated = findCorrelation(descrCor, cutoff=0.7)
+
+#Identifying Variable Names of Highly Correlated Variables
+highlyCorCol = colnames(numericData)[highlyCorrelated]
+
+#Print highly correlated attributes
+highlyCorCol
+help("findCorrelation")
+```
+
+findCorrelation() :
+ This function searches through a correlation matrix and returns a vector of integers corresponding to columns to remove to reduce pair-wise correlations.The absolute values of pair-wise correlations are considered. If two variables have a high correlation, the function looks at the mean absolute correlation of each variable and removes the variable with the largest mean absolute correlation.
+ 
+```{r}
+#Remove highly correlated variables and create a new dataset
+dat3 = mtcars[, -which(colnames(mtcars) %in% highlyCorCol)]
+dim(dat3)
+
+```
+ 
+ There are three variables "hp"   "disp" "wt" that found to be highly correlated. We have removed them to avoid collinearity. Now, we have 7 independent variables and 1 dependent variable.
+
+
+```{r}
+#Build Linear Regression Model
+fit = lm(mpg ~ ., data=dat3)
+
+#Check Model Performance
+summary(fit)
+
+#Extracting Coefficients
+summary(fit)$coeff
+anova(fit)
+
+par(mfrow=c(2,2))
+plot(fit)
+```
+Linear regression model tests the null hypothesis that the estimate is equal to zero. An independent variable that has a p-value less than 0.05 means we are rejecting the null hypothesis at 5% level of significance. It means the coefficient of that variable is not equal to 0. A large p-value implies variable is meaningless in order to predict target variable.
+
+plot interpretation:
+
+The points in the Residuals vs. Fitted plot are randomly scattered on the plot that verifies the independence condition.
+
+The Normal Q-Q plot consists of the points which mostly fall on the line indicating that the residuals are normally distributed.
+
+The Scale-Location plot consists of points scattered in a constant band pattern, indicating constant variance.
+
+There are some distinct points of interest (outliers or leverage points) in the topright of the plots that may indicate values of increased leverage of outliers.
+
+
+
+check this:
+
+https://rstudio-pubs-static.s3.amazonaws.com/267832_7d06930eacb947a182e935e81246ccf7.html
