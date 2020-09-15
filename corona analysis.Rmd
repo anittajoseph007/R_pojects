@@ -1,0 +1,127 @@
+---
+title: "ti"
+author: "Bebin K Raju"
+date: "09/06/2020"
+output: word_document
+---
+
+```{r}
+Covid<- read.csv("C:/Users/Anitta/Downloads/Covid cases in Karnataka.csv")
+head(Covid)
+```
+
+```{r}
+a <- is.na(Covid$Place)
+table(a)
+a <- is.na(Covid$Age)
+table(a)
+a <- is.na(Covid$Gender)
+table(a)
+a <- is.na(Covid$Total.cases)
+table(a)
+a <- is.na(Covid$Deaths)
+table(a)
+a <- is.na(Covid$Hospital)
+table(a)
+a <- is.na(Covid$No.of.contacts)
+table(a)
+
+```
+
+```{r}
+data=data.frame(Covid$Date,Covid$Total.cases,Covid$Deaths,Covid$No.of.contacts)
+```
+
+```{r}
+head(data)
+```
+```{r}
+time<-ts(data)
+class(time)
+ts.plot(time,gpars= list(col=rainbow(4)))
+legend("topright", inset=.05, title="covid 19",
+   legend =c("Total.cases","Covid.Deaths","No.of.contacts"), col = 1:4,lty = 1)
+
+
+```
+
+```{r}
+data=data.frame(Covid$Date,Covid$Place,Covid$Age,Covid$Gender,Covid$Total.cases,Covid$Deaths,Covid$No.of.contacts,Covid$Hospital)
+
+
+```
+
+```{r}
+h<-table(Covid$Place,Covid$Total.cases)
+h
+```
+
+from the table we can see that benguluru and mysore 
+```{r}
+library(ggplot2)
+ggplot(data) + geom_bar(aes(x = data$Covid.Place))+ theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+the plot also shows the same
+
+
+```{r}
+library(ggplot2)
+```
+
+
+```{r}
+ggplot(data) + geom_bar(aes(x = data$Covid.Gender),fill="steelblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+```{r}
+h<-table(data$Covid.Gender)
+h
+```
+
+
+
+```{r}
+x <-  c(h)
+lbl <-  c(h)
+
+# Plot the chart.
+library(plotrix)
+pie3D(x,labels = lbl,explode = 0.1, main = "male and female count ")
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(data) + geom_bar(aes(x = data$Covid.Age),fill="steelblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+
+we can see that the more affected age group is in 20-70.
+```{r}
+library(ggplot2)
+ggplot(data) + geom_bar(aes(x = data$Covid.Hospital), fill="steelblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+since most of the cases are reported in bangalore  we can do more analysis on bangloare.
+
+```{r}
+bangalore<-subset.data.frame(data,data$Covid.Place=="Bengaluru")
+bangalore
+
+```
+```{r}
+ggplot(bangalore) + geom_bar(aes(x = bangalore$Covid.Gender),fill="steelblue")+ theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+```{r}
+
+
+
+# Plot the chart.
+library(plotrix)
+h<-table(bangalore$Covid.Gender)
+x <-  c(h)
+lbl <-  c(h)
+pie3D(x,labels = lbl,explode = 0.1, main = "male and female count ")
+```
+
+
+
