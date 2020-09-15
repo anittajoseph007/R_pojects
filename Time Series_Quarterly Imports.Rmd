@@ -1,0 +1,113 @@
+---
+title: "Time Series_Quarterly Imports"
+author: "Anita S George"
+date: "8/27/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import file
+
+
+```{r}
+data<-read.csv("D:/Anita docs/MDS-3RD SEM/time series/quarterlyukimport.csv")
+```
+
+## Time Series analysis
+-Convert data into ts object
+
+-Plot ts and acf of data (to check if stationary or not)
+
+-Identify the non stationarity components
+
+-Test for nonstationarity(ADF Test)
+
+-Transform the data into stationary series
+
+-Examine the acf and pacf of stationary data
+
+-Fit ARMA model
+
+-Examine residuals
+
+-make predictions
+
+```{r}
+#library(tseries)
+#library(forecast)
+data1=ts(data,start=c(1960,1),end=c(1970,1),frequency=4)
+#attach(data$imports) #helps to extract the variable from data
+ts.plot(data1,main="UK import data")#ts plot
+acf(data1)
+#ts plot shows that data has trend component and acf shows non random series(non stationary)
+```
+
+```{r}
+#Ho=data is non stationary
+adf.test(data1)
+
+```
+
+p-value is greater tahn 0.05, so null hypothesis is accepted(i.e it is non stationary in nature)
+
+
+```{r}
+#making data stationary
+diffdata<-diff(data1)
+ts.plot(diffdata)
+acf(diffdata)
+adf.test(diffdata)
+```
+
+```{r}
+acf(diffdata)
+pacf(diffdata)
+```
+
+MA(1) as acf cuts after lag 1 and pacf is oscillatory
+
+
+```{r}
+fit=auto.arima(diffdata,seasonal=FALSE)
+fit
+fit=auto.arima(data1,seasonal=FALSE)
+fit
+```
+
+
+Residual analysis
+```{r}
+fit=auto.arima(data1,seasonal=FALSE)#to obtain residuals fit for original data
+fit
+res=residuals(fit)
+plot(res,main="Residuals of the fitted model")
+```
+We have to verify if the assumptions on error term are satisfied(i.e. uncorrelated[verified using acf],iid,normally distributed with mean 0 and const variance)
+```{r}
+acf(res)
+```
+this shows it is uncorrelated
+
+To check for normality:
+Ho:it is normally distributed
+```{r}
+shapiro.test(res)
+```
+
+Since p-value>0.05, residual series are normally distributed as null hypothesis accepted.
+
+
+Prediction(next 4 observations)
+```{r}
+newfit=forecast(fit,h=4)
+newfit
+```
+Forecast-Two types: Out sample forecast and insample forecast. The above case is out of sample forecast
+
+```{r}
+plot(newfit)
+```
+
